@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: NAMESPACE
+  name: backend-api-content-deployment # {Repository_이름}-deployment 형태로 변경
+spec:
+  replicas: REPLICAS
+  selector:
+    matchLabels:
+      app: backend-api-content # Repository 이름으로 변경
+  template:
+    metadata:
+      labels:
+        app: backend-api-content # Repository 이름으로 변경
+    spec:
+      nodeSelector:
+        privateSubnet: "true"
+      terminationGracePeriodSeconds: 30 # Graceful Shutdown 시간(단위:초), 이 시간이 지나면 강제 종료 됨.
+      containers:
+        - name: backend-api-content # Repository 이름으로 변경
+          image: AWS_ECR_URI #buildspec.yml에서 ECR의 URI:TAG 로 치환해줌
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+          env:
+            - name: DATE
+              value: 'DATE_STRING'
+            - name: DOCKER_TAG
+              value: '_DOCKER_TAG_'
+          resources:
+            requests:
+              cpu: "125m"
+          lifecycle:
+            preStop: # 멈추기전에 트래픽이 들어오지 않도록 세팅
+             exec:
+                command:
+                  - sh
+                  - -c
+                  - curl --silent http://localhost/status/change/readiness/refuse; sleep 20
+          livenessProbe: # 서비스 기동 여부
+            httpGet:
+              path: /monitor/health/liveness
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 3
+          readinessProbe: # 서비스 가능 여부
+            httpGet:
+              path: /monitor/health/readiness
+              port: 80
+            initialDelaySeconds: 60 # start 후 서비스 가능할때 까지 지연시간
+            periodSeconds: 3 # 호출 간격
+            failureThreshold: 3 # 실패 횟수
+            timeoutSeconds: 1
+          volumeMounts:
+            - name: tz-seoul
+              mountPath: /etc/localtime
+      volumes:
+        - name: tz-seoul
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Seoul

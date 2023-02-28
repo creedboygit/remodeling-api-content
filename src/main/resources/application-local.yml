@@ -1,0 +1,149 @@
+server:
+  port: 8080
+spring:
+  jackson:
+    serialization:
+      indent-output: true
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/REMODELING_CONTENT?useUnicode=true&characterEncoding=utf8&autoReconnect=true
+    username: abc
+    password: abc
+    hikari:
+      maximum-pool-size: 2
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+#    show-sql: true
+    hibernate:
+      #ddl-auto : update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+    properties:
+      hibernate:
+#        show-sql: true
+        format_sql: true
+        enable_lazy_load_no_trans: false
+#        use_sql_comments: true
+        default_batch_fetch_size: 500
+  redis:
+    host: 127.0.0.1 # dev-remodeling-cache.y9b7eg.ng.0001.apn2.cache.amazonaws.com
+    port: 6379
+  data:
+    redis:
+      repositories:
+        enabled: true
+  zipkin:
+    enabled: false
+#  kafka:
+#    consumer:
+#      bootstrap-servers: localhost:9092
+#      group-id: hutt-test
+#      auto-offset-reset: earliest
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 35MB
+  gateway-url: http://localhost:8090/
+#axon:
+#  serializer:
+#    general: xstream
+#  axonserver:
+#    servers: localhost:8124
+#    component-name: saga
+
+logging:
+  level:
+    root: DEBUG
+    p6spy: DEBUG
+#    org.hibernate.SQL: OFF
+#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+#    org.springframework.jdbc.core.JdbcTemplate: DEBUG
+#    org.springframework.jdbc.core.StatementCreatorUtils: DEBUG
+#    org.springframework.jdbc.datasource.SimpleDriverDataSource: DEBUG
+#    i.a.a.c: ERROR
+
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      multiline: false
+      logging: slf4j
+springdoc:
+  version: '1.6.13'
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    groups:
+      enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    use-root-path: true
+    groups-order: desc
+    doc-expansion: "none"
+  cache:
+    disabled: true
+
+amazon :
+  bucket: dev-remodeling
+  bucket-domain: https://dev-remodeling.s3.ap-northeast-2.amazonaws.com
+  cdn-url: https://dev-static.remodeling.hanssem.com
+domain:
+  gateway: https://dev-gw.remodeling.hanssem.com
+  mobile: https://dev-m.remodeling.hanssem.com
+  pc: https://dev.remodeling.hanssem.com # 임시값.
+
+feign:
+  baseUrl:
+    HanssemMallClient: https://pjmall.hanssem.com
+    HanssemMallManagerClient: https://pjmall.hanssem.com:2443
+    CommonServiceClient: https://dev-internal-gw.remodeling.hanssem.com/common-service
+    notification-service-client: https://dev-internal-gw.remodeling.hanssem.com/notification-service
+#    CommonServiceClient: https://dev-gw.remodeling.hanssem.com/common-service
+#    notification-service-client: https://dev-gw.remodeling.hanssem.com/notification-service
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 5000
+        logger-level: full
+        default-request-headers:
+          Accept: application/json
+      HanssemMallClient:
+        default-request-headers:
+          SiteKey: c7a4c96286e7f65209e49bdb6e0c4281916b4301f355be4c494b769b6c08c3fc
+          Content-Type: application/x-www-form-urlencoded
+
+content:
+  admin-api-logging: false
+  category:
+    standard-large-category-no: 16264
+  display:
+    template-info: # 필드 추가 후, DisplayTemplateInfoDto 멤버추가 필요.
+      large-category-template-no: 432
+      middle-category-template-no: 433
+      small-category-template-no: 434
+      shop-int-agnt-detail-template-no: 452
+      main-menu-template-code: M_MAIN_MENU # 햄버거 상단 퀵메뉴 templateCode: GNB관리>통합메인>모바일>공통>메뉴
+    gnb:
+      page-url-list:
+        - template-no: 343 # 추천
+          page-url: /main
+        - template-no: 458 # 매장
+          page-url: /shop/search # /main?module=GnbRemodelingShop
+        - template-no: 459 # 상품
+          page-url: /goods # /main?module=GnbRemodelingGoods
+        - template-no: 346 # 리모델링 시작하기
+          page-url: /remodeling-start # /main?module=GnbRemodelingStart
+        - template-no: 347 # 이벤트
+          page-url: /event # /main?module=GnbRemodelingEvent
+        - template-no: 460 # 한샘리하우스
+          page-url: /rehouse # /main?module=GnbRemodelingRehouse
+  event:
+    exposure-days: 180
+  favorite-test:
+    consult:
+      channel-type: OP10_01

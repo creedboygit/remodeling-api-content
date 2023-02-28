@@ -1,0 +1,51 @@
+version: 0.2
+cache:
+  paths:
+    - '/root/.gradle/caches/**/*'
+phases:
+  install:
+#    runtime-versions:
+#      docker: 20
+    commands:
+      - cp -p /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+      - curl -o kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.23.7/2022-06-29/bin/linux/amd64/kubectl
+      - chmod +x ./kubectl
+      - mv ./kubectl /usr/local/bin/kubectl
+      - mkdir ~/.kube
+      - aws eks --region ap-northeast-2 update-kubeconfig --name $AWS_CLUSTER_NAME
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region ap-northeast-2)
+  build:
+    on-failure: ABORT
+    commands:
+      - NAMESPACE=$NAME_SPACE #Namespace 이름
+      - IMAGE_REPO_NAME=backend-api-content #Repository 이름으로 변경
+      - ECR_BASE_URL=$ECR_BASE_DOMAIN/remodeling
+      - echo Build Starting on `date`
+      - echo Building with gradle...
+      - chmod +x ./gradlew
+      - ./gradlew clean bootJar
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER --build-arg SPRING_PROFILES_ACTIVE=$SPRING_PROFILES_ACTIVE .
+      - docker tag $IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER $ECR_BASE_URL/$IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER
+      - docker push $ECR_BASE_URL/$IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER
+  post_build:
+    commands:
+      - AWS_ECR_URI=$ECR_BASE_URL/$IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER
+      - DATE=`date "+%Y-%m-%d %H:%M:%S"`
+      - echo Build completed on $DATE
+      - sed -i.bak 's#AWS_ECR_URI#'"$AWS_ECR_URI"'#' ./deployment.yml
+      - sed -i.bak 's#DATE_STRING#'"$DATE"'#' ./deployment.yml
+      - sed -i.bak 's#NAMESPACE#'"$NAMESPACE"'#' ./deployment.yml
+      - sed -i.bak 's#REPLICAS#'"$REPLICAS"'#' ./deployment.yml
+      - sed -i.bak 's#_DOCKER_TAG_#'"$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER"'#' ./deployment.yml
+      - sed -i.bak 's#NAMESPACE#'"$NAMESPACE"'#' ./service.yml
+      - sed -i.bak 's#NAMESPACE#'"$NAMESPACE"'#' ./hpa.yml
+      - sed -i.bak 's#MAX_REPLICAS#'"$MAX_REPLICAS"'#' ./hpa.yml
+      - sed -i.bak 's#REPLICAS#'"$REPLICAS"'#' ./hpa.yml
+      - kubectl apply -f ./deployment.yml
+      - kubectl apply -f ./service.yml
+      - kubectl apply -f ./hpa.yml
+      - kubectl --namespace=$NAMESPACE annotate deployment $IMAGE_REPO_NAME-deployment kubernetes.io/change-cause="[$DATE] $IMAGE_REPO_NAME:$SPRING_PROFILES_ACTIVE-$CODEBUILD_BUILD_NUMBER" --overwrite=true

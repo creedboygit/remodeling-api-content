@@ -1,0 +1,17 @@
+spring:
+  config:
+    activate:
+      on-profile: dev, stage, prod, qa
+aws:
+  secretsmanager:
+    name: backend-api
+    region: ap-northeast-2
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+aws:
+  secretsmanager:
+    enabled: false
